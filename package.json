@@ -1,0 +1,26 @@
+{
+  "name": "scrapper",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsc -b && node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "puppeteer": "^24.6.1",
+    "puppeteer-core": "^24.6.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/node-fetch": "^2.6.12",
+    "@types/puppeteer": "^5.4.7",
+    "typescript": "^5.8.3"
+  }
+}

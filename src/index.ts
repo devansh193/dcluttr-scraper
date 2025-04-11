@@ -1,5 +1,7 @@
 import fetch from "node-fetch";
-import { writeFileSync } from "fs";
+import { writeFileSync, mkdirSync, existsSync } from "fs";
+import { join } from "path";
+import { randomUUID } from "crypto";
 
 interface VariantData {
   id: number;
@@ -35,18 +37,13 @@ const BASE_URL = "https://blinkit.com";
 const headers = {
   "Content-Type": "application/json",
   "User-Agent": "Mozilla/5.0",
-  lat: "28.4552521",
-  lon: "77.5046101",
+  lat: "28.5045",
+  lon: "77.012",
 };
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const categoryPairs: {
-  label_l0: string;
-  label_l1: string;
-  l0: number;
-  l1: number;
-}[] = [
+const categoryPairs = [
   {
     label_l0: "munchies",
     label_l1: "Bhujia & mixtures",
@@ -70,6 +67,12 @@ const categoryPairs: {
   { label_l0: "Sweets", label_l1: "Indian sweets", l0: 9, l1: 943 },
 ];
 
+const randomFolder = `blinkit-data-${randomUUID().slice(0, 8)}`;
+if (!existsSync(randomFolder)) {
+  mkdirSync(randomFolder);
+  console.log(`Created folder: ${randomFolder}`);
+}
+
 const scrapeBlinkit = async (
   label_l0: string,
   label_l1: string,
@@ -80,8 +83,7 @@ const scrapeBlinkit = async (
   const allProducts: Product[] = [];
 
   while (url) {
-    console.log(`🌐 Fetching: ${url}`);
-    console.log("");
+    console.log(`🌐 Fetching: ${url}\n`);
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -89,9 +91,10 @@ const scrapeBlinkit = async (
         body: JSON.stringify({}),
       });
       if (!res.ok) {
-        console.error(`❌------Failed here at ${url}: ${res.statusText}`);
+        console.error(`❌ Failed at ${url}: ${res.statusText}`);
         break;
       }
+
       const data: any = await res.json();
       const snippets = data?.response?.snippets || [];
       const extracted: Product[] = snippets
@@ -128,37 +131,38 @@ const scrapeBlinkit = async (
         );
 
       allProducts.push(...extracted);
+
       const nextUrl = data?.response?.pagination?.next_url;
       url = nextUrl ? `${BASE_URL}${nextUrl}` : "";
+
       const urlParams = new URLSearchParams(url.split("?")[1]);
       const totalItemsStr = urlParams.get("total_pagination_items");
       const totalItems = totalItemsStr ? parseInt(totalItemsStr, 10) : 0;
 
       if (totalItems > 300) {
         await delay(3000);
-        console.log("------Delaying request by 3 sec.-------");
+        console.log("Delaying request by 3 sec...\n");
       } else {
         await delay(300);
       }
     } catch (error) {
-      console.error(`Error fetching data l0:${l0}, l1:${l1}`, error);
+      console.error(`Error fetching l0:${l0}, l1:${l1}`, error);
       break;
     }
   }
 
-  const fileName = `blinkit-data-${label_l1}.json`;
-  writeFileSync(fileName, JSON.stringify(allProducts, null, 2), "utf-8");
+  const safeLabel = label_l1.replace(/[^a-zA-Z0-9]/g, "_"); // Make filename safe
+  const filePath = join(randomFolder, `blinkit-data-${safeLabel}.json`);
+  writeFileSync(filePath, JSON.stringify(allProducts, null, 2), "utf-8");
   console.log(
-    `✅ Scraped ${allProducts.length} products for l0:${l0}, l1:${l1}. Saved to ${fileName}`
+    `✅ Scraped ${allProducts.length} products for ${label_l1}, saved to ${filePath}\n`
   );
 };
 
 (async () => {
   for (const { label_l0, label_l1, l0, l1 } of categoryPairs) {
     await scrapeBlinkit(label_l0, label_l1, l0, l1);
-    console.log("");
-    console.log(`_________Scraped data for l0_${label_l0} and l1_${label_l1}`);
-    console.log("");
+    console.log(`🗂️ Finished scraping ${label_l0} > ${label_l1}\n`);
     await delay(500);
   }
 })();
